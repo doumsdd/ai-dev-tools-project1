@@ -1,0 +1,137 @@
+{
+  "clients": [
+    {
+      "id": "c1",
+      "companyName": "Nexity Promotion Lyon",
+      "contactName": "Claire Dubois",
+      "email": "c.dubois@nexity-lyon.fr",
+      "phone": "04 72 11 22 33",
+      "address": "12 Rue de la République, 69002 Lyon",
+      "siret": "44434567800012",
+      "vatNumber": "FR12444345678",
+      "createdAt": "2026-01-10"
+    },
+    {
+      "id": "c2",
+      "companyName": "Mairie de Villeurbanne",
+      "contactName": "Jean-Marc Petit",
+      "email": "services.techniques@villeurbanne.fr",
+      "phone": "04 78 03 67 67",
+      "address": "Place Lazare Goujon, 69100 Villeurbanne",
+      "siret": "21690266800013",
+      "vatNumber": "FR45216902668",
+      "createdAt": "2026-02-03"
+    },
+    {
+      "id": "c3",
+      "companyName": "OPAC du Rhône",
+      "contactName": "Sophie Laurent",
+      "email": "s.laurent@opac-rhone.fr",
+      "phone": "04 72 76 30 00",
+      "address": "2 Place de Francfort, 69003 Lyon",
+      "siret": "77964310200025",
+      "vatNumber": "FR78779643102",
+      "createdAt": "2026-02-20"
+    },
+    {
+      "id": "c4",
+      "companyName": "SCI Les Terrasses",
+      "contactName": "Marc Bernard",
+      "email": "marc.bernard@sci-terrasses.fr",
+      "phone": "06 12 34 56 78",
+      "address": "45 Chemin des Vignes, 69380 Lozanne",
+      "siret": "81234567900018",
+      "vatNumber": "FR33812345679",
+      "createdAt": "2026-03-15"
+    },
+    {
+      "id": "c5",
+      "companyName": "M. et Mme Moreau",
+      "contactName": "Pierre Moreau",
+      "email": "p.moreau@gmail.com",
+      "phone": "06 98 76 54 32",
+      "address": "8 Allée des Tilleuls, 69130 Écully",
+      "siret": "—",
+      "vatNumber": "—",
+      "createdAt": "2026-04-02"
+    }
+  ],
+  "invoices": [
+    {
+      "id": "i1",
+      "number": "FAC-2026-001",
+      "clientId": "c1",
+      "projectName": "Résidence Le Belvédère — Lot gros œuvre",
+      "issueDate": "2026-04-05",
+      "dueDate": "2026-05-05",
+      "status": "paid",
+      "paidAt": "2026-04-28",
+      "createdAt": "2026-04-05",
+      "lines": [
+        { "id": "l1", "description": "Terrassement et fouilles en pleine masse", "quantity": 420, "unit": "m³", "unitPriceHT": 28, "vatRate": 20 },
+        { "id": "l2", "description": "Dalle béton armé ép. 20 cm", "quantity": 380, "unit": "m²", "unitPriceHT": 85, "vatRate": 20 },
+        { "id": "l3", "description": "Main d'œuvre maçons", "quantity": 120, "unit": "h", "unitPriceHT": 45, "vatRate": 20 }
+      ]
+    },
+    {
+      "id": "i2",
+      "number": "FAC-2026-002",
+      "clientId": "c2",
+      "projectName": "Groupe scolaire Jean Moulin — Toiture",
+      "issueDate": "2026-04-18",
+      "dueDate": "2026-05-18",
+      "status": "paid",
+      "paidAt": "2026-05-15",
+      "createdAt": "2026-04-18",
+      "lines": [
+        { "id": "l4", "description": "Dépose couverture existante", "quantity": 650, "unit": "m²", "unitPriceHT": 12, "vatRate": 20 },
+        { "id": "l5", "description": "Couverture tuiles terre cuite", "quantity": 650, "unit": "m²", "unitPriceHT": 58, "vatRate": 20 },
+        { "id": "l6", "description": "Zinguerie et gouttières", "quantity": 140, "unit": "ml", "unitPriceHT": 42, "vatRate": 20 }
+      ]
+    },
+    {
+      "id": "i3",
+      "number": "FAC-2026-003",
+      "clientId": "c3",
+      "projectName": "Réhabilitation Bât. C — Plomberie",
+      "issueDate": "2026-05-10",
+      "dueDate": "2026-06-10",
+      "status": "paid",
+      "paidAt": "2026-06-08",
+      "createdAt": "2026-05-10",
+      "lines": [
+        { "id": "l7", "description": "Remplacement colonnes EU/EV", "quantity": 24, "unit": "u", "unitPriceHT": 890, "vatRate": 10 },
+        { "id": "l8", "description": "Plombier qualifié", "quantity": 80, "unit": "h", "unitPriceHT": 48, "vatRate": 10 }
+      ]
+    },
+    {
+      "id": "i4",
+      "number": "FAC-2026-004",
+      "clientId": "c4",
+      "projectName": "Extension villa — Maçonnerie",
+      "issueDate": "2026-06-02",
+      "dueDate": "2026-07-02",
+      "status": "paid",
+      "paidAt": "2026-07-01",
+      "createdAt": "2026-06-02",
+      "lines": [
+        { "id": "l9", "description": "Murs parpaings 20 cm", "quantity": 145, "unit": "m²", "unitPriceHT": 62, "vatRate": 20 },
+        { "id": "l10", "description": "Chaînages et linteaux", "quantity": 1, "unit": "forfait", "unitPriceHT": 3200, "vatRate": 20 }
+      ]
+    },
+    {
+      "id": "i5",
+      "number": "FAC-2026-005",
+      "clientId": "c5",
+      "projectName": "Rénovation salle de bain",
+      "issueDate": "2026-07-08",
+      "dueDate": "2026-08-08",
+      "status": "cancelled",
+      "createdAt": "2026-07-08",
+      "lines": [
+        { "id": "l11", "description": "Carrelage grès cérame", "quantity": 18, "unit": "m²", "unitPriceHT": 75, "vatRate": 10 },
+        { "id": "l12", "description": "Pose receveur et paroi", "quantity": 1, "unit": "forfait", "unitPriceHT": 1450, "vatRate": 10 }
+      ]
+    }
+  ]
+}

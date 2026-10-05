@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  # API FastAPI
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: guestbtp-api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://guestbtp:guestbtp@db:5432/guestbtp
+      - SECRET_KEY=your-secret-key-change-in-production
+      - DEBUG=True
+      - CORS_ORIGINS=["http://localhost:3000","http://localhost:5173"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - guestbtp-network
+
+  # Base de données PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: guestbtp-db
+    environment:
+      - POSTGRES_USER=guestbtp
+      - POSTGRES_PASSWORD=guestbtp
+      - POSTGRES_DB=guestbtp
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U guestbtp -d guestbtp"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - guestbtp-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  guestbtp-network:
+    driver: bridge

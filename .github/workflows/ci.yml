@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        cache-dependency-path: backend/requirements-dev.txt
+
+    - name: Install dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+
+    - name: Lint with ruff
+      run: |
+        cd backend
+        ruff check .
+
+    - name: Test with pytest
+      run: |
+        cd backend
+        pytest --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: coverage-report
+        path: |
+          backend/htmlcov/
+          backend/coverage.xml
+
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        cache-dependency-path: backend/requirements-dev.txt
+
+    - name: Install dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+
+    - name: Run bandit (static code analysis)
+      run: |
+        cd backend
+        bandit -r app/ -f txt > ../security/bandit-output.txt 2>&1 || true
+
+    - name: Run pip-audit (dependency vulnerabilities)
+      run: |
+        cd backend
+        pip-audit -r requirements.txt > ../security/pip-audit-output.txt 2>&1 || true
+
+    - name: Upload security audit results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-audit
+        path: |
+          security/bandit-output.txt
+          security/pip-audit-output.txt

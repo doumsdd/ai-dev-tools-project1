@@ -1,0 +1,887 @@
+openapi: 3.0.3
+info:
+  title: guestBTP API
+  description: |
+    API de facturation pour entreprises du BTP.
+    
+    # Introduction
+    guestBTP est une application de gestion de facturation conçue pour les artisans
+    et entreprises du secteur du bâtiment. Elle permet de gérer les clients, créer
+    des factures avec TVA BTP (5.5%, 10%, 20%), et suivre le chiffre d'affaires.
+    
+    # Règles métier
+    - Une facture ne peut jamais être supprimée
+    - Statuts : brouillon → envoyée → payée | annulée | en_retard
+    - Une facture payée ou annulée est en lecture seule
+    - Numérotation automatique : FA-AAAA-NNNN
+    
+    # Authentification
+    L'API utilise des tokens JWT Bearer pour l'authentification.
+  version: 1.0.0
+  contact:
+    name: guestBTP Support
+    email: support@guestbtp.com
+    url: https://guestbtp.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Serveur de développement
+  - url: https://api.guestbtp.com/v1
+    description: Serveur de production
+
+tags:
+  - name: clients
+    description: Gestion des clients
+  - name: invoices
+    description: Gestion des factures
+  - name: analytics
+    description: Statistiques et tableaux de bord
+
+paths:
+  /clients:
+    post:
+      tags:
+        - clients
+      summary: Créer un client
+      description: |
+        Crée un nouveau client dans le système.
+        
+        **Règles de validation :**
+        - Le nom doit contenir au moins 2 caractères
+        - L'email doit être au format RFC 5322 et unique
+        - Le SIRET doit contenir exactement 14 chiffres (optionnel)
+        - Le type de client doit être : particulier, entreprise, ou maitre_ouvrage
+      operationId: createClient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientCreate'
+            example:
+              name: "Entreprise Durand"
+              email: "contact@durand-btp.fr"
+              phone: "+33 1 23 45 67 89"
+              address: "12 rue du Chantier, 75012 Paris"
+              siret: "12345678901234"
+              client_type: "entreprise"
+      responses:
+        '201':
+          description: Client créé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+              example:
+                id: 1
+                name: "Entreprise Durand"
+                email: "contact@durand-btp.fr"
+                phone: "+33 1 23 45 67 89"
+                address: "12 rue du Chantier, 75012 Paris"
+                siret: "12345678901234"
+                client_type: "entreprise"
+                archived: false
+                created_at: "2026-01-15T10:30:00Z"
+                updated_at: "2026-01-15T10:30:00Z"
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                error: "validation_error"
+                message: "Données invalides"
+                details:
+                  - field: "email"
+                    message: "Format d'email invalide"
+                  - field: "siret"
+                    message: "Le SIRET doit contenir 14 chiffres"
+        '409':
+          description: Conflit - Email déjà utilisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "conflict"
+                message: "Un client avec cet email existe déjà"
+      security:
+        - bearerAuth: []
+    get:
+      tags:
+        - clients
+      summary: Lister les clients
+      description: |
+        Récupère la liste paginée des clients avec possibilité de filtrer et rechercher.
+        
+        **Fonctionnalités :**
+        - Pagination (page, limit)
+        - Filtrage par type de client
+        - Filtrage par statut archivé
+        - Recherche par nom ou email
+      operationId: listClients
+      parameters:
+        - name: page
+          in: query
+          description: Numéro de page (commence à 1)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Nombre d'éléments par page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: client_type
+          in: query
+          description: Filtrer par type de client
+          required: false
+          schema:
+            $ref: '#/components/schemas/ClientType'
+        - name: archived
+          in: query
+          description: Inclure les clients archivés
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: search
+          in: query
+          description: Rechercher par nom ou email
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+      responses:
+        '200':
+          description: Liste des clients récupérée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientListResponse'
+              example:
+                data:
+                  - id: 1
+                    name: "Entreprise Durand"
+                    email: "contact@durand-btp.fr"
+                    phone: "+33 1 23 45 67 89"
+                    address: "12 rue du Chantier, 75012 Paris"
+                    siret: "12345678901234"
+                    client_type: "entreprise"
+                    archived: false
+                    created_at: "2026-01-15T10:30:00Z"
+                pagination:
+                  page: 1
+                  limit: 20
+                  total: 45
+                  total_pages: 3
+      security:
+        - bearerAuth: []
+
+
+  /invoices:
+    post:
+      tags:
+        - invoices
+      summary: Créer une facture
+      description: |
+        Crée une nouvelle facture avec ses lignes de travaux.
+        
+        **Règles métier :**
+        - Le numéro de facture est généré automatiquement (FA-AAAA-NNNN)
+        - Au moins une ligne est obligatoire
+        - Les taux de TVA doivent être : 5.5, 10, ou 20
+        - Les calculs (HT, TVA, TTC) sont effectués automatiquement
+        - La facture est créée en statut "brouillon"
+      operationId: createInvoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceCreate'
+            example:
+              client_id: 1
+              issue_date: "2026-01-15"
+              due_date: "2026-02-15"
+              lines:
+                - description: "Rénovation salle de bain - Carrelage"
+                  category: "maconnerie"
+                  quantity: 25
+                  unit: "m²"
+                  unit_price: 85.50
+                  vat_rate: 10
+                  discount: 0
+                - description: "Installation plomberie complète"
+                  category: "plomberie"
+                  quantity: 1
+                  unit: "forfait"
+                  unit_price: 1200
+                  vat_rate: 10
+                  discount: 5
+              notes: "Paiement à 30 jours."
+      responses:
+        '201':
+          description: Facture créée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+              example:
+                id: 1
+                invoice_number: "FA-2026-0001"
+                client_id: 1
+                status: "brouillon"
+                issue_date: "2026-01-15"
+                due_date: "2026-02-15"
+                subtotal_ht: 3277.50
+                total_vat: 327.75
+                total_ttc: 3605.25
+                created_at: "2026-01-15T10:30:00Z"
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                error: "validation_error"
+                message: "Données invalides"
+                details:
+                  - field: "lines"
+                    message: "Au moins une ligne est obligatoire"
+        '404':
+          description: Client non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "not_found"
+                message: "Client avec l'ID 999 introuvable"
+      security:
+        - bearerAuth: []
+
+    get:
+      tags:
+        - invoices
+      summary: Lister les factures
+      description: |
+        Récupère la liste paginée des factures avec filtrage avancé.
+        
+        **Filtres disponibles :**
+        - Par statut (brouillon, envoyee, payee, annulee, en_retard)
+        - Par client
+        - Par période (date_from, date_to)
+      operationId: listInvoices
+      parameters:
+        - name: page
+          in: query
+          description: Numéro de page (commence à 1)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Nombre d'éléments par page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: status
+          in: query
+          description: Filtrer par statut
+          required: false
+          schema:
+            $ref: '#/components/schemas/InvoiceStatus'
+        - name: client_id
+          in: query
+          description: Filtrer par client
+          required: false
+          schema:
+            type: integer
+        - name: date_from
+          in: query
+          description: Date d'émission minimale (YYYY-MM-DD)
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          description: Date d'émission maximale (YYYY-MM-DD)
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Liste des factures récupérée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceListResponse'
+              example:
+                data:
+                  - id: 1
+                    invoice_number: "FA-2026-0001"
+                    client_id: 1
+                    client_name: "Entreprise Durand"
+                    status: "envoyee"
+                    issue_date: "2026-01-15"
+                    due_date: "2026-02-15"
+                    total_ttc: 3605.25
+                    created_at: "2026-01-15T10:30:00Z"
+                pagination:
+                  page: 1
+                  limit: 20
+                  total: 12
+                  total_pages: 1
+      security:
+        - bearerAuth: []
+
+
+  /analytics/revenue:
+    get:
+      tags:
+        - analytics
+      summary: Statistiques de revenus
+      description: |
+        Récupère les statistiques financières globales et détaillées.
+        
+        **Données retournées :**
+        - Chiffre d'affaires total (HT et TTC)
+        - TVA collectée
+        - Nombre de factures par statut
+        - Montant moyen par facture
+        - Répartition mensuelle sur l'année
+        - Top 5 clients par CA
+      operationId: getRevenueAnalytics
+      parameters:
+        - name: year
+          in: query
+          description: Année pour les statistiques
+          required: false
+          schema:
+            type: integer
+            minimum: 2020
+            maximum: 2100
+          example: 2026
+        - name: client_id
+          in: query
+          description: Filtrer par client spécifique
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Statistiques récupérées avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsRevenue'
+              example:
+                year: 2026
+                total_revenue_ht: 125450.00
+                total_revenue_ttc: 150540.00
+                total_vat_collected: 25090.00
+                paid_invoices_count: 45
+                pending_invoices_count: 8
+                cancelled_invoices_count: 2
+                average_invoice_amount: 3345.33
+                monthly_breakdown:
+                  - month: 1
+                    month_name: "Janvier"
+                    revenue_ht: 12500.00
+                    revenue_ttc: 15000.00
+                    invoices_count: 5
+                top_clients:
+                  - client_id: 1
+                    client_name: "Entreprise Durand"
+                    total_revenue_ttc: 25000.00
+                    invoices_count: 8
+        '400':
+          description: Paramètres invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "validation_error"
+                message: "L'année doit être comprise entre 2020 et 2100"
+        '404':
+          description: Client non trouvé (si client_id fourni)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "not_found"
+                message: "Client avec l'ID 999 introuvable"
+      security:
+        - bearerAuth: []
+
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT obtenu via /auth/login
+
+  schemas:
+    ClientType:
+      type: string
+      enum: [particulier, entreprise, maitre_ouvrage]
+      description: Type de client
+      example: "entreprise"
+
+    InvoiceStatus:
+      type: string
+      enum: [brouillon, envoyee, payee, annulee, en_retard]
+      description: Statut de la facture
+      example: "brouillon"
+
+    WorkCategory:
+      type: string
+      enum: [maconnerie, plomberie, electricite, peinture, terrassement, couverture, autre]
+      description: Catégorie de travaux BTP
+      example: "plomberie"
+
+    VatRate:
+      type: number
+      enum: [5.5, 10, 20]
+      description: Taux de TVA BTP (en pourcentage)
+      example: 10
+
+    Unit:
+      type: string
+      enum: ["m²", "m³", heure, jour, forfait, unité]
+      description: Unité de mesure
+      example: "m²"
+
+    ClientCreate:
+      type: object
+      required: [name, email, client_type]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 255
+          description: Nom du client (personne ou entreprise)
+          example: "Entreprise Durand"
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: Adresse email (unique)
+          example: "contact@durand-btp.fr"
+        phone:
+          type: string
+          maxLength: 50
+          description: Numéro de téléphone
+          example: "+33 1 23 45 67 89"
+        address:
+          type: string
+          maxLength: 500
+          description: Adresse postale complète
+          example: "12 rue du Chantier, 75012 Paris"
+        siret:
+          type: string
+          pattern: '^[0-9]{14}$'
+          description: Numéro SIRET (14 chiffres, optionnel)
+          example: "12345678901234"
+        client_type:
+          $ref: '#/components/schemas/ClientType'
+
+    Client:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Identifiant unique du client
+          example: 1
+        name:
+          type: string
+          example: "Entreprise Durand"
+        email:
+          type: string
+          format: email
+          example: "contact@durand-btp.fr"
+        phone:
+          type: string
+          example: "+33 1 23 45 67 89"
+        address:
+          type: string
+          example: "12 rue du Chantier, 75012 Paris"
+        siret:
+          type: string
+          nullable: true
+          example: "12345678901234"
+        client_type:
+          $ref: '#/components/schemas/ClientType'
+        archived:
+          type: boolean
+          default: false
+          example: false
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-01-15T10:30:00Z"
+
+    ClientSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Entreprise Durand"
+        email:
+          type: string
+          format: email
+          example: "contact@durand-btp.fr"
+        phone:
+          type: string
+          example: "+33 1 23 45 67 89"
+        client_type:
+          $ref: '#/components/schemas/ClientType'
+        archived:
+          type: boolean
+          example: false
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-15T10:30:00Z"
+
+    ClientListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClientSummary'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    InvoiceLineCreate:
+      type: object
+      required: [description, category, quantity, unit, unit_price, vat_rate]
+      properties:
+        description:
+          type: string
+          minLength: 1
+          maxLength: 500
+          example: "Rénovation salle de bain - Carrelage"
+        category:
+          $ref: '#/components/schemas/WorkCategory'
+        quantity:
+          type: number
+          minimum: 0.01
+          example: 25
+        unit:
+          $ref: '#/components/schemas/Unit'
+        unit_price:
+          type: number
+          minimum: 0.01
+          example: 85.50
+        vat_rate:
+          $ref: '#/components/schemas/VatRate'
+        discount:
+          type: number
+          minimum: 0
+          maximum: 100
+          default: 0
+          example: 0
+
+    InvoiceLine:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        description:
+          type: string
+          example: "Rénovation salle de bain - Carrelage"
+        category:
+          $ref: '#/components/schemas/WorkCategory'
+        quantity:
+          type: number
+          example: 25
+        unit:
+          $ref: '#/components/schemas/Unit'
+        unit_price:
+          type: number
+          example: 85.50
+        vat_rate:
+          $ref: '#/components/schemas/VatRate'
+        discount:
+          type: number
+          example: 0
+        total_ht:
+          type: number
+          example: 2137.50
+
+    InvoiceCreate:
+      type: object
+      required: [client_id, issue_date, lines]
+      properties:
+        client_id:
+          type: integer
+          example: 1
+        issue_date:
+          type: string
+          format: date
+          example: "2026-01-15"
+        due_date:
+          type: string
+          format: date
+          example: "2026-02-15"
+        lines:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/InvoiceLineCreate'
+        notes:
+          type: string
+          maxLength: 2000
+          example: "Paiement à 30 jours."
+
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        invoice_number:
+          type: string
+          pattern: '^FA-[0-9]{4}-[0-9]{4}$'
+          example: "FA-2026-0001"
+        client_id:
+          type: integer
+          example: 1
+        client:
+          $ref: '#/components/schemas/ClientSummary'
+        status:
+          $ref: '#/components/schemas/InvoiceStatus'
+        issue_date:
+          type: string
+          format: date
+          example: "2026-01-15"
+        due_date:
+          type: string
+          format: date
+          example: "2026-02-15"
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceLine'
+        subtotal_ht:
+          type: number
+          example: 3277.50
+        total_vat:
+          type: number
+          example: 327.75
+        total_ttc:
+          type: number
+          example: 3605.25
+        notes:
+          type: string
+          example: "Paiement à 30 jours."
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-01-15T10:30:00Z"
+
+    InvoiceSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        invoice_number:
+          type: string
+          example: "FA-2026-0001"
+        client_id:
+          type: integer
+          example: 1
+        client_name:
+          type: string
+          example: "Entreprise Durand"
+        status:
+          $ref: '#/components/schemas/InvoiceStatus'
+        issue_date:
+          type: string
+          format: date
+          example: "2026-01-15"
+        due_date:
+          type: string
+          format: date
+          example: "2026-02-15"
+        total_ttc:
+          type: number
+          example: 3605.25
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-15T10:30:00Z"
+
+    InvoiceListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceSummary'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    MonthlyRevenue:
+      type: object
+      properties:
+        month:
+          type: integer
+          minimum: 1
+          maximum: 12
+          example: 1
+        month_name:
+          type: string
+          example: "Janvier"
+        revenue_ht:
+          type: number
+          example: 12500.00
+        revenue_ttc:
+          type: number
+          example: 15000.00
+        invoices_count:
+          type: integer
+          example: 5
+
+    TopClient:
+      type: object
+      properties:
+        client_id:
+          type: integer
+          example: 1
+        client_name:
+          type: string
+          example: "Entreprise Durand"
+        total_revenue_ttc:
+          type: number
+          example: 25000.00
+        invoices_count:
+          type: integer
+          example: 8
+
+    AnalyticsRevenue:
+      type: object
+      properties:
+        year:
+          type: integer
+          example: 2026
+        total_revenue_ht:
+          type: number
+          example: 125450.00
+        total_revenue_ttc:
+          type: number
+          example: 150540.00
+        total_vat_collected:
+          type: number
+          example: 25090.00
+        paid_invoices_count:
+          type: integer
+          example: 45
+        pending_invoices_count:
+          type: integer
+          example: 8
+        cancelled_invoices_count:
+          type: integer
+          example: 2
+        average_invoice_amount:
+          type: number
+          example: 3345.33
+        monthly_breakdown:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonthlyRevenue'
+        top_clients:
+          type: array
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/TopClient'
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 45
+        total_pages:
+          type: integer
+          example: 3
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "not_found"
+        message:
+          type: string
+          example: "Ressource non trouvée"
+
+    ValidationError:
+      type: object
+      properties:
+        error:
+          type: string
+          enum: [validation_error]
+          example: "validation_error"
+        message:
+          type: string
+          example: "Données invalides"
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationDetail'
+
+    ValidationDetail:
+      type: object
+      properties:
+        field:
+          type: string
+          example: "email"
+        message:
+          type: string
+          example: "Format d'email invalide"
+

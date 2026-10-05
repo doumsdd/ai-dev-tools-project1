@@ -1,0 +1,76 @@
+{
+  "_comment": "Remaining invoices (i6-i10) - append to main mock-data.json",
+  "invoices_continued": [
+    {
+      "id": "i6",
+      "number": "FAC-2026-006",
+      "clientId": "c1",
+      "projectName": "Résidence Le Belvédère — Situation n°2",
+      "issueDate": "2026-07-20",
+      "dueDate": "2026-08-20",
+      "status": "overdue",
+      "createdAt": "2026-07-20",
+      "lines": [
+        { "id": "l13", "description": "Élévation voiles béton", "quantity": 520, "unit": "m²", "unitPriceHT": 95, "vatRate": 20 },
+        { "id": "l14", "description": "Coffrage et ferraillage", "quantity": 1, "unit": "forfait", "unitPriceHT": 18500, "vatRate": 20 }
+      ]
+    },
+    {
+      "id": "i7",
+      "number": "FAC-2026-007",
+      "clientId": "c3",
+      "projectName": "Isolation thermique par l'extérieur",
+      "issueDate": "2026-08-25",
+      "dueDate": "2026-09-25",
+      "status": "overdue",
+      "createdAt": "2026-08-25",
+      "lines": [
+        { "id": "l15", "description": "ITE polystyrène 14 cm + enduit", "quantity": 780, "unit": "m²", "unitPriceHT": 98, "vatRate": 5.5 },
+        { "id": "l16", "description": "Échafaudage", "quantity": 1, "unit": "forfait", "unitPriceHT": 6200, "vatRate": 5.5 }
+      ]
+    },
+    {
+      "id": "i8",
+      "number": "FAC-2026-008",
+      "clientId": "c2",
+      "projectName": "Voirie parking mairie",
+      "issueDate": "2026-09-15",
+      "dueDate": "2026-10-30",
+      "status": "sent",
+      "createdAt": "2026-09-15",
+      "lines": [
+        { "id": "l17", "description": "Enrobé à chaud 6 cm", "quantity": 1200, "unit": "m²", "unitPriceHT": 32, "vatRate": 20 },
+        { "id": "l18", "description": "Bordures T2", "quantity": 260, "unit": "ml", "unitPriceHT": 38, "vatRate": 20 },
+        { "id": "l19", "description": "Marquage au sol", "quantity": 1, "unit": "forfait", "unitPriceHT": 1800, "vatRate": 20 }
+      ]
+    },
+    {
+      "id": "i9",
+      "number": "FAC-2026-009",
+      "clientId": "c4",
+      "projectName": "Extension villa — Charpente",
+      "issueDate": "2026-09-28",
+      "dueDate": "2026-10-28",
+      "status": "sent",
+      "createdAt": "2026-09-28",
+      "lines": [
+        { "id": "l20", "description": "Charpente traditionnelle sapin", "quantity": 85, "unit": "m²", "unitPriceHT": 145, "vatRate": 20 },
+        { "id": "l21", "description": "Charpentier", "quantity": 40, "unit": "h", "unitPriceHT": 52, "vatRate": 20 }
+      ]
+    },
+    {
+      "id": "i10",
+      "number": "FAC-2026-010",
+      "clientId": "c5",
+      "projectName": "Terrasse béton désactivé",
+      "issueDate": "2026-10-03",
+      "dueDate": "2026-11-03",
+      "status": "draft",
+      "createdAt": "2026-10-03",
+      "lines": [
+        { "id": "l22", "description": "Béton désactivé ép. 12 cm", "quantity": 42, "unit": "m²", "unitPriceHT": 89, "vatRate": 10 },
+        { "id": "l23", "description": "Préparation du support", "quantity": 1, "unit": "forfait", "unitPriceHT": 950, "vatRate": 10 }
+      ]
+    }
+  ]
+}
