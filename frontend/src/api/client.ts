@@ -101,6 +101,13 @@ export const invoicesApi = {
     id: number,
     status: InvoiceStatus
   ): Promise<Invoice> => {
+    const { data } = await apiClient.patch(`/invoices/${id}/status`, {
+      status,
+    });
+    return data;
+  },
+};
+
 // ============ Fonctions utilitaires ============
 
 /**
@@ -128,14 +135,13 @@ export function calculateLineVat(lineTotalHt: number, vatRate: number): number {
 
 /**
  * Calcule les totaux d'une facture à partir de ses lignes.
- * @returns { subtotal_ht, total_vat, total_ttc }
  */
-export function calculateTotal(lines: Array<{
+export function calculateTotal(lines: {
   quantity: number;
   unit_price: number;
-  vat_rate: number;
   discount?: number;
-}>): { subtotal_ht: number; total_vat: number; total_ttc: number } {
+  vat_rate: number;
+}[]): { subtotal_ht: number; total_vat: number; total_ttc: number } {
   let subtotal_ht = 0;
   let total_vat = 0;
 
@@ -153,13 +159,6 @@ export function calculateTotal(lines: Array<{
   return { subtotal_ht, total_vat, total_ttc };
 }
 
-    const { data } = await apiClient.patch(`/invoices/${id}/status`, {
-      status,
-    });
-    return data;
-  },
-};
-
 // ============ Analytics API ============
 
 export const analyticsApi = {
@@ -169,6 +168,7 @@ export const analyticsApi = {
     });
     return data;
   },
+};
 
 // ============ Hooks TanStack Query ============
 
@@ -261,4 +261,3 @@ export function useRevenueAnalytics(year?: number) {
   });
 }
 
-};
