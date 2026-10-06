@@ -502,10 +502,13 @@ The application is containerized and ready for deployment:
 - Docker multi-stage build (optimized image size)
 - PostgreSQL for production database
 - Gunicorn + Uvicorn workers (planned)
+- Deployed on Render
 
 **Frontend**:
 - Static build optimized for CDN
-- Ready for Vercel, Netlify, or Cloudflare Pages
+- Deployed on Vercel
+- **Note**: The frontend is maintained in a separate repository: [buildright-billing](https://github.com/doumsdd/buildright-billing)
+- **Live demo**: https://buildright-billing.vercel.app/
 
 ### Recommended Stack
 
